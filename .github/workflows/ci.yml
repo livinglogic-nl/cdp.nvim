@@ -14,20 +14,32 @@ jobs:
           version: latest
           args: --check .
 
-  docs:
-    runs-on: ubuntu-latest
-    name: pandoc to vimdoc
-    if: ${{ github.ref == 'refs/heads/main' }}
+  test:
+    name: Run Test
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-latest]
     steps:
       - uses: actions/checkout@v3
-      - name: panvimdoc
-        uses: kdheepak/panvimdoc@main
+      - uses: rhysd/action-setup-vim@v1
+        id: vim
         with:
-          vimdoc: guard.nvim
-          treesitter: true
-      - uses: stefanzweifel/git-auto-commit-action@v4
+          neovim: true
+          version: nightly
+
+      - name: luajit
+        uses: leafo/gh-actions-lua@v10
         with:
-          commit_message: "chore(doc): auto generate docs"
-          commit_user_name: "github-actions[bot]"
-          commit_user_email: "github-actions[bot]@users.noreply.github.com"
-          commit_author: "github-actions[bot] <github-actions[bot]@users.noreply.github.com>"
+          luaVersion: "luajit-openresty"
+
+      - name: luarocks
+        uses: leafo/gh-actions-luarocks@v4
+
+      - name: run test
+        shell: bash
+        run: |
+          luarocks install luacheck
+          luarocks install vusted
+          TZ=Europe/Amsterdam vusted ./lua
+
